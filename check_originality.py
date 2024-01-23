@@ -7,10 +7,10 @@ if len(sys.argv) < 2:
     raise ValueError("Need path as first argument.")
 
 path = sys.argv[1]
-with open("drafts/gajah-dan-monyet.json") as f:
+with open(path) as f:
     story = json.load(f)
 
-content = " ".join(story["contents"])
+content = story["isi"]
 content = "".join((c if c in "abcdefghijklmnopqrstuvwxyz" else " ") for c in content)
 tokens = content.strip().split()
 

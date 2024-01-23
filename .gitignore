@@ -164,3 +164,4 @@ config.json
 huggingface_cache
 drafts
 log.txt
+private

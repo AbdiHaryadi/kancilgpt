@@ -9,20 +9,61 @@ def publish_story(story_path):
         story = json.load(fp)
     
     # Prepare the Story3 batch
-    batches = []
-    content_idx = len(story["contents"]) - 1
-    assert content_idx >= 0
+    sentences = []
+    sentence_prefix_sum_length = [0]
+    isi = story["isi"]
+    i = 0
+    while i < len(isi):
+        current_sentence = ""
+        in_quote = False
+        end_sentence = False
+        while i < len(isi) and not (end_sentence and (not in_quote) and isi[i] == " "):
+            current_sentence += isi[i]
+            if isi[i] == "\"":
+                in_quote = not in_quote
 
-    while content_idx >= 0:
-        batch_content = story["contents"][content_idx]
-        while content_idx > 0 and len(batch_content) < 300:
-            content_idx -= 1
-            batch_content = story["contents"][content_idx] + " " + batch_content
-        # i == 0 or len(batch_content) == 300
-        batches.insert(0, batch_content)
-        content_idx -= 1
-    # content_idx == -1
+            if end_sentence:
+                end_sentence = isi[i] not in "abcdefghijklmnopqrstuvwxyz"
+            else:
+                end_sentence = isi[i] in ".?!"
+
+            i += 1
+        # i == len(isi) or end_sentence or (not in_quote) or isi[i] == " "
+        
+        sentences.append(current_sentence)
+        sentence_prefix_sum_length.append(sentence_prefix_sum_length[-1] + len(current_sentence))
+
+        while i < len(isi) and not (isi[i] in "abcdefghijklmnopqrstuvwxyz\""):
+            i += 1
+        # i == len(isi) or isi[i] in "abcdefghijklmnopqrstuvwxyz\""
+        
+    limit = 300
+    i_start = 0
+    i_end = 1
+    batches = []
+
+    while i_end < len(sentences):
+        while (i_end < len(sentences)) and (sentence_prefix_sum_length[i_end] - sentence_prefix_sum_length[i_start] + (i_start - i_end) < limit):
+            i_end += 1
+        # i_end == len(sentences) or reach limit
+
+        if i_end < len(sentences):
+            batches.append(" ".join(sentences[i_start:i_end]))
+            i_start = i_end
+            i_end += 1
+
+        if limit == 300:
+            # To make a twist longer.
+            limit = 600
     
+    # i_end == len(sentences)
+    
+    batches.append(" ".join(sentences[i_start:i_end]))
+
+    print(f"Total batch: {len(batches)}")
+    
+    print("Posting batch 1 ....")
+
     res = post_to_story3_with_log(
         endpoint="/api/v2/stories",
         data={
@@ -30,6 +71,7 @@ def publish_story(story_path):
             "body": batches[0]
         }
     )
+
 
     if res.status_code != 201:
         raise ValueError(f"Unexpected response status code: {res.status_code}. Check log.txt.")
@@ -39,6 +81,8 @@ def publish_story(story_path):
         raise ValueError(f"Expecting hashId key, got unexpected JSON:\n{story3_data}")
     hash_parent_id = story3_data["hashId"]
     
+    print("Publishing batch 1 ....")
+
     res = post_to_story3_with_log(
         endpoint=f"/api/v2/twists/{hash_parent_id}/publish"
     )
@@ -71,6 +115,8 @@ def publish_story(story_path):
         else:
             judul = isi[:isi_idx - 3] + "..."
 
+        print(f"Posting batch {batch_idx + 1} ....")
+
         res = post_to_story3_with_log(
             endpoint="/api/v2/twists",
             data={
@@ -88,6 +134,8 @@ def publish_story(story_path):
         if "hashId" not in story3_data:
             raise ValueError(f"Expecting hashId key, got unexpected JSON:\n{story3_data}")
         hash_parent_id = story3_data["hashId"]
+
+        print(f"Publishing batch {batch_idx + 1} ....")
 
         res = post_to_story3_with_log(
             endpoint=f"/api/v2/twists/{hash_parent_id}/publish"
@@ -130,5 +178,6 @@ if __name__ == "__main__":
         
         story_path = sys.argv[2]
         res = publish_story(story_path=story_path)
+        print("Analyzed!")
     else:
         raise NotImplementedError
