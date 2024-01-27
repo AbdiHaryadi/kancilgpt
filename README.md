@@ -2,10 +2,11 @@
 This README only focuses on "how to use". For more information about the model itself, please go to [Huggingface](https://huggingface.co/abdiharyadi/kancilgpt).
 
 ## How to Use
-1. `git submodule update --init --recursive`
-2. `pip install -r requirements.txt`
-3. Generate a story: `py kancilgpt.py`
-4. Validate the originality of a story: `py check_originality.py <path>`
+1. Make sure Python has been installed. This program has been tested in Python 3.11.5.
+2. Run `git submodule update --init --recursive`.
+3. Run `pip install -r requirements.txt`.
+4. Generate a story: `py kancilgpt.py`
+4. Validate the originality of a story from dataset: `py check_originality.py <path>`
 
 To publish the story to Story3:
 1. Copy `config_template.json` to `config.json`, and set the API key.

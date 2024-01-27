@@ -13,7 +13,7 @@ def generate_random_story_kancil_gpt():
     stop = False
     while not stop:
         gpt_input = gpt_tokenizer('<s> awal cerita | judul:', return_tensors='pt')
-        gpt_out = kancilgpt.generate(**gpt_input, do_sample=True, max_new_tokens=512, pad_token_id=gpt_tokenizer.eos_token_id)
+        gpt_out = kancilgpt.generate(**gpt_input, do_sample=True, max_length=512, pad_token_id=gpt_tokenizer.eos_token_id)
         result = gpt_tokenizer.decode(gpt_out[0])
         _, judul_prompt, isi, *end_part = result.split(" | ")
         end_part = "".join(end_part)
@@ -23,7 +23,7 @@ def generate_random_story_kancil_gpt():
         print(f"Judul: {judul}")
         print(isi)
 
-        if "</s>" in judul or "</s>" in isi or "|" in isi:
+        if "</s>" in judul or "</s>" in isi or "|" in isi or (not any(end_part.startswith(x) for x in ["bersambung", "tamat"])):
             print("Invalid output! Regenerating ....")
             continue
 
@@ -69,7 +69,7 @@ def generate_random_story_kancil_gpt():
         stop = False
         while not stop:
             gpt_input = gpt_tokenizer(f'<s> pertengahan cerita | judul: {judul} | {next_isi}', return_tensors='pt')
-            gpt_out = kancilgpt.generate(**gpt_input, do_sample=True, max_new_tokens=len(isi) - len(next_isi), pad_token_id=gpt_tokenizer.eos_token_id)
+            gpt_out = kancilgpt.generate(**gpt_input, do_sample=True, max_length=512, pad_token_id=gpt_tokenizer.eos_token_id)
             result = gpt_tokenizer.decode(gpt_out[0])
 
             _, judul_prompt, isi, *end_part = result.split(" | ")
@@ -80,7 +80,7 @@ def generate_random_story_kancil_gpt():
             if isi[len(next_isi) + 1:].strip() != "":
                 print(isi[len(next_isi) + 1:])
 
-            if "</s>" in isi or "|" in isi:
+            if "</s>" in isi or "|" in isi or (not any(end_part.startswith(x) for x in ["bersambung", "tamat"])):
                 print("Invalid output! Regenerating ....")
                 continue
 
@@ -108,7 +108,7 @@ if __name__ == "__main__":
     import os
 
     story = generate_random_story_kancil_gpt()
-    judul = "-".join(story["judul"].split())
+    judul = "-".join("".join([(x if x in "abcdefghijklmnopqrstuvwxyz" else " ") for x in story["judul"]]).strip().split())
     filename = f"{judul}.json"
 
     postfix_number = 1
